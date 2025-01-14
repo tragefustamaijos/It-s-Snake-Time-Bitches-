@@ -8,6 +8,11 @@ var height =canvas.height
 
 const speed = 1;
 const cell = 25;
+var isGameOver = false;
+var timer;
+c.font = "20px Times New Roman"
+var message = "Game Over, Bitch!"
+let lungime_mesaj = c.measureText(message).width
 
 function rand_cell()
 {
@@ -104,24 +109,51 @@ var snake = {
     }
 }
 
-function check_for_collision()
+function GameOver()
 {
-    if(snake.x == food.x && snake.y == food.y)
-    {
-        snake.body.push(new Tile(food.x, food.y));
-        food = new Tile(rand_cell(), rand_cell());
-    }
+    
+    c.fillStyle = "red"
+    c.fillText("Game Over, Bitch!", width/2 - lungime_mesaj/2, height/2 - 20)
 }
 
-window.setInterval(function()
+function check_for_collision()
 {
-    check_for_collision()
-    c.clearRect(0, 0, width, height);
-    //draw_border();
-    snake.move();
-    snake.draw();
-    draw_food();
-}, 100)
+    // check for hitting the boarder
+    if(snake.x *cell < 0 || (snake.x + 1) *cell > width ||
+        snake.y *cell < 0 || (snake.y + 1) * cell > height)
+            {clearInterval(timer)
+            GameOver()
+            }
+
+    // hitting itself
+    for(var bodyPart of snake.body)
+    {
+        if(bodyPart.x == snake.x && bodyPart.y == snake.y)
+           {clearInterval(timer)
+            GameOver();
+           }
+    }
+
+    /// food
+    if(snake.x == food.x && snake.y == food.y)
+        {
+            snake.body.push(new Tile(food.x, food.y));
+            food = new Tile(rand_cell(), rand_cell());
+        }
+}
+
+ timer = setInterval(function()
+ {
+     c.clearRect(0, 0, width, height);
+     //draw_border();
+
+     draw_food();
+     check_for_collision()
+     c.fillStyle = "white"
+     c.fillText("Score: " + snake.body.length, cell-16, cell + 5)
+     snake.move();
+     snake.draw();
+ }, 100)
 
 
 window.addEventListener("keypress", function(e)
@@ -146,67 +178,64 @@ window.addEventListener("keypress", function(e)
             snake.velocityY = 0
             snake.velocityX = speed
         }
+
+    if(e.key == 'r')
+        location.reload()
+    console.log(e.key)
 })
 
 
 /// This part of code is for the phone users. Hope this shit works or i'm gonna pull my eyeballs out
 
-let startX, startY, endX, endY;
+function detectTapSide(x, y) {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
 
-        const swipeArea = document.getElementById('swipeArea');
+    const topThreshold = screenHeight * 0.25;    // Top region: 25% of screen height
+    const bottomThreshold = screenHeight * 0.75; // Bottom region: 75% of screen height
+    const leftThreshold = screenWidth * 0.25;    // Left region: 25% of screen width
+    const rightThreshold = screenWidth * 0.75;   // Right region: 75% of screen width
 
-        // Function to handle the start of the swipe
-        window.addEventListener('touchstart', function(event) {
-            const touch = event.touches[0];
-            startX = touch.clientX; // Get the starting X coordinate
-            startY = touch.clientY; // Get the starting Y coordinate
-        });
+    if (y < topThreshold && snake.velocityY != speed) {
+        // top 
+        snake.velocityY = -speed;
+        snake.velocityX = 0;
+    }
+     else if (y > bottomThreshold && snake.velocityY != -speed) {
+            //bottom
+            snake.velocityY = speed;
+            snake.velocityX = 0;
+    } 
+    else if (x < leftThreshold && snake.velocityX != speed) {
+        //console.log("Tapped on the left");
+            snake.velocityY = 0
+            snake.velocityX = -speed
+    } 
+    else if (x > rightThreshold && snake.velocityX != -speed) {
+            snake.velocityY = 0
+            snake.velocityX = speed
+        //console.log("Tapped on the right");
+    } else {
+        console.log("Tapped in the center");
+    }
+}
 
-        // Function to handle the end of the swipe
-        window.addEventListener('touchend', function(event) {
-            const touch = event.changedTouches[0];
-            endX = touch.clientX; // Get the ending X coordinate
-            endY = touch.clientY; // Get the ending Y coordinate
+// Handle touch events for mobile devices
+window.addEventListener('touchstart', function(event) {
+    const touch = event.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
 
-            // Calculate the differences
-            const diffX = endX - startX;
-            const diffY = endY - startY;
+    detectTapSide(x, y);
+});
 
-            // Determine the swipe direction
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                // Horizontal swipe
-                if (diffX > 0 && snake.velocityX != -speed)
-                {
-                    /// right
-                    snake.velocityY = 0
-                    snake.velocityX = speed
+// Handle click events for desktop (mouse click)
+window.addEventListener('click', function(event) {
+    const x = event.clientX;
+    const y = event.clientY;
 
-                } else {
-                    //left
-                    if(snake.velocityX != speed)
-                    {
-                        snake.velocityY = 0
-                        snake.velocityX = -speed
-                    }
-                }
-            } else {
-                // Vertical swipe
-                if (diffY > 0 && snake.velocityY != -speed) {
-                    //down
-                    snake.velocityY = speed;
-                    snake.velocityX = 0;
-                } else {
-
-                    //up
-                    if(snake.velocityY != speed)
-                    {
-                        snake.velocityY = -speed;
-                        snake.velocityX = 0;
-                    }
-                }
-            }
-        });
-
+    detectTapSide(x, y);
+});
 window.addEventListener("resize", function(){
     location.reload();
 })
